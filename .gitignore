@@ -1,0 +1,18 @@
+# VS Code
+.vscode/*
+!.vscode/settings.json
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Logs and temp
+*.log
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# Local env
+.env

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse & Mining Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <header class="bg-slate-900 text-white">
+    <div class="mx-auto max-w-7xl px-4 py-5">
+      <h1 class="text-2xl font-bold">Data Warehousing and Mining Dashboard</h1>
+      <p class="text-slate-300">Oracle OLTP -> Dimensions -> Data Mart</p>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-6">
+    <section class="rounded-lg bg-white p-4 shadow">
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="initDb" class="rounded bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700">Initialize Database</button>
+        <button id="createDims" class="rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">Create Dimensions</button>
+        <button id="createMart" class="rounded bg-teal-600 px-4 py-2 font-semibold text-white hover:bg-teal-700">Create Data Mart</button>
+        <button id="runPerf" class="rounded bg-amber-600 px-4 py-2 font-semibold text-white hover:bg-amber-700">Run Performance Comparison</button>
+        <button id="refreshStats" class="rounded bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700">Refresh Stats</button>
+        <span id="status" class="text-sm text-slate-600"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="mb-3 text-lg font-semibold">Statistics</h2>
+      <div id="stats" class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6"></div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-2">
+      <div class="rounded-lg bg-white p-4 shadow">
+        <h3 class="mb-3 text-base font-semibold">Customers</h3>
+        <div class="max-h-64 overflow-auto">
+          <table class="w-full text-sm">
+            <thead><tr><th class="text-left">ID</th><th class="text-left">Name</th><th class="text-left">City</th></tr></thead>
+            <tbody id="customersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rounded-lg bg-white p-4 shadow">
+        <h3 class="mb-3 text-base font-semibold">Products</h3>
+        <div class="max-h-64 overflow-auto">
+          <table class="w-full text-sm">
+            <thead><tr><th class="text-left">ID</th><th class="text-left">Product</th><th class="text-left">Price</th></tr></thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-lg bg-white p-4 shadow">
+      <h3 class="mb-3 text-base font-semibold">Data Mart (Monthly)</h3>
+      <div class="max-h-72 overflow-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr>
+              <th class="text-left">Month</th>
+              <th class="text-left">Product</th>
+              <th class="text-left">City</th>
+              <th class="text-left">Units</th>
+              <th class="text-left">Net Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="datamartBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const apiBase = "http://localhost:5000/api";
+
+    function setStatus(message, isError = false) {
+      const status = document.getElementById("status");
+      status.textContent = message;
+      status.className = isError ? "text-sm text-red-600" : "text-sm text-slate-600";
+    }
+
+    async function getJson(path, options = {}) {
+      const response = await fetch(`${apiBase}${path}`, options);
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed: ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function renderStats(stats) {
+      const labels = [
+        ["Sales", stats.sales],
+        ["Customers", stats.customers],
+        ["Products", stats.products],
+        ["Locations", stats.locations],
+        ["Product Dim", stats.product_dim],
+        ["Location Dim", stats.location_dim],
+        ["Sales Fact", stats.sales_fact],
+        ["Data Mart", stats.sales_datamart]
+      ];
+      document.getElementById("stats").innerHTML = labels.map(([name, value]) => `
+        <div class="rounded border bg-white p-3 shadow-sm">
+          <div class="text-xs uppercase text-slate-500">${name}</div>
+          <div class="text-2xl font-bold">${value ?? 0}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderTable(bodyId, rows, mapper) {
+      document.getElementById(bodyId).innerHTML = rows.map(mapper).join("");
+    }
+
+    async function refreshAll() {
+      try {
+        setStatus("Loading data...");
+        const [stats, customers, products, datamart] = await Promise.all([
+          getJson("/stats"),
+          getJson("/customers"),
+          getJson("/products"),
+          getJson("/data-mart")
+        ]);
+
+        renderStats(stats);
+        renderTable("customersBody", customers.slice(0, 20), row => `<tr><td>${row.customer_id}</td><td>${row.first_name} ${row.last_name}</td><td>${row.city}</td></tr>`);
+        renderTable("productsBody", products.slice(0, 20), row => `<tr><td>${row.product_id}</td><td>${row.product_name}</td><td>${row.unit_price}</td></tr>`);
+        renderTable("datamartBody", datamart.slice(0, 50), row => `<tr><td>${row.year}-${String(row.month_number).padStart(2, "0")}</td><td>${row.product_name}</td><td>${row.city}</td><td>${row.total_units_sold}</td><td>${row.net_revenue}</td></tr>`);
+        setStatus("Data loaded");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    }
+
+    document.getElementById("initDb").addEventListener("click", async () => {
+      try {
+        setStatus("Initializing database...");
+        await getJson("/init-database", { method: "POST" });
+        await refreshAll();
+        setStatus("Database initialized successfully");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("createDims").addEventListener("click", async () => {
+      try {
+        setStatus("Creating dimensions...");
+        await getJson("/create-dimensions", { method: "POST" });
+        await refreshAll();
+        setStatus("Dimensions created successfully");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("createMart").addEventListener("click", async () => {
+      try {
+        setStatus("Creating data mart...");
+        await getJson("/create-data-mart", { method: "POST" });
+        await refreshAll();
+        setStatus("Data mart created successfully");
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("runPerf").addEventListener("click", async () => {
+      try {
+        setStatus("Running performance comparison...");
+        const rows = await getJson("/performance-comparison");
+        const summary = rows.map(r => `${r.phase}: ${r.rows_returned} rows`).join(" | ");
+        setStatus(`Performance results: ${summary}`);
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+
+    document.getElementById("refreshStats").addEventListener("click", refreshAll);
+
+    refreshAll();
+  </script>
+</body>
+</html>

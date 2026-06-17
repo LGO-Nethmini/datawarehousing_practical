@@ -65,7 +65,7 @@ CREATE TABLE SALES (
     sale_date      DATE           NOT NULL,
     quantity_sold  INT            NOT NULL CHECK (quantity_sold > 0),
     unit_price     DECIMAL(10,2)  NOT NULL,
-    total_amount   DECIMAL(12,2)  GENERATED ALWAYS AS (quantity_sold * unit_price) STORED,
+    total_amount   DECIMAL(12,2),
     payment_method VARCHAR(30)    DEFAULT 'Cash',
 
     FOREIGN KEY (customer_id) REFERENCES CUSTOMER(customer_id),
