@@ -1034,5 +1034,21 @@ This complete data warehousing practical implements all core concepts:
 
 ---
 
+## 14. Screenshots
+
+The following screenshots were added to the project to show the main dashboard outputs and workflow steps:
+
+| Screenshot | Purpose |
+|---|---|
+| [database-init-1.png](Screenshots/database-init-1.png) | Database initialization view |
+| [Architecture_Layers.png](Screenshots/Architecture_Layers.png) | Overall architecture layers |
+| [Star_Schema.png](Screenshots/Star_Schema.png) | Star schema design view |
+| [Data_mart.png](Screenshots/Data_mart.png) | Monthly data mart output |
+| [performance-comparison.png](Screenshots/performance-comparison.png) | Performance comparison screen |
+
+These images can be used in your submission, presentation, or viva to demonstrate the full project flow from initialization to reporting.
+
+---
+
 **End of Complete Data Warehousing Practical Guide**
 *For questions or enhancements, refer to the backend/database.py and backend/app.py source files.*
